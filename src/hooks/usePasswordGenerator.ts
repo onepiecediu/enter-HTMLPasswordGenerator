@@ -25,27 +25,54 @@ export const usePasswordGenerator = () => {
 
   // 生成密码的核心函数
   const generatePassword = useCallback(() => {
-    // 构建字符集
-    let charset = '';
-    if (options.includeUppercase) charset += UPPERCASE;
-    if (options.includeLowercase) charset += LOWERCASE;
-    if (options.includeNumbers) charset += NUMBERS;
-    if (options.includeSymbols) charset += SYMBOLS;
+    // 收集所有选中的字符集
+    const selectedCharsets: string[] = [];
+    if (options.includeUppercase) selectedCharsets.push(UPPERCASE);
+    if (options.includeLowercase) selectedCharsets.push(LOWERCASE);
+    if (options.includeNumbers) selectedCharsets.push(NUMBERS);
+    if (options.includeSymbols) selectedCharsets.push(SYMBOLS);
 
     // 检查是否至少选择了一种字符类型
-    if (charset.length === 0) {
+    if (selectedCharsets.length === 0) {
       return '请至少选择一种字符类型';
     }
 
-    // 使用 crypto.getRandomValues() 生成更安全的随机数
+    // 构建完整字符集
+    const charset = selectedCharsets.join('');
+
+    // 确保密码至少包含每种选中的字符类型
     let newPassword = '';
-    const randomValues = new Uint32Array(length);
+    
+    // 第一步：从每个选中的字符集中各选一个字符
+    const guaranteedChars: string[] = [];
+    selectedCharsets.forEach((set) => {
+      const randomValue = new Uint32Array(1);
+      crypto.getRandomValues(randomValue);
+      const randomIndex = randomValue[0] % set.length;
+      guaranteedChars.push(set[randomIndex]);
+    });
+
+    // 第二步：填充剩余的字符（从完整字符集中随机选择）
+    const remainingLength = length - guaranteedChars.length;
+    const randomValues = new Uint32Array(remainingLength);
     crypto.getRandomValues(randomValues);
 
-    for (let i = 0; i < length; i++) {
+    for (let i = 0; i < remainingLength; i++) {
       const randomIndex = randomValues[i] % charset.length;
-      newPassword += charset[randomIndex];
+      guaranteedChars.push(charset[randomIndex]);
     }
+
+    // 第三步：打乱字符顺序（Fisher-Yates 洗牌算法）
+    const shuffleArray = guaranteedChars.slice();
+    const shuffleRandomValues = new Uint32Array(shuffleArray.length);
+    crypto.getRandomValues(shuffleRandomValues);
+
+    for (let i = shuffleArray.length - 1; i > 0; i--) {
+      const j = shuffleRandomValues[i] % (i + 1);
+      [shuffleArray[i], shuffleArray[j]] = [shuffleArray[j], shuffleArray[i]];
+    }
+
+    newPassword = shuffleArray.join('');
 
     setPassword(newPassword);
     return newPassword;
