@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
-import { Lock, Copy, RefreshCw } from 'lucide-react';
+import { Lock, Copy, RefreshCw, Languages } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePasswordGenerator } from '@/hooks/usePasswordGenerator';
+import { useLanguage } from '@/hooks/useLanguage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -20,30 +21,33 @@ export const PasswordGenerator = () => {
     isValid,
   } = usePasswordGenerator();
 
+  const { language, t, toggleLanguage } = useLanguage();
+
   // 页面加载时自动生成密码
   useEffect(() => {
-    generatePassword();
-  }, [generatePassword]);
+    generatePassword(t.selectAtLeastOneType);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 处理生成按钮点击
   const handleGenerate = () => {
     if (!isValid()) {
-      toast.error('请至少选择一种字符类型！');
+      toast.error(t.selectAtLeastOne);
       return;
     }
-    generatePassword();
+    generatePassword(t.selectAtLeastOneType);
   };
 
   // 处理复制到剪贴板
   const handleCopy = async () => {
-    if (!password || password === '请至少选择一种字符类型') {
-      toast.error('请先生成密码！');
+    if (!password || password.includes('select at least one') || password.includes('至少选择一种')) {
+      toast.error(t.generateFirst);
       return;
     }
 
     try {
       await navigator.clipboard.writeText(password);
-      toast.success('密码已复制到剪贴板！');
+      toast.success(t.copied);
     } catch (err) {
       // 降级方案
       fallbackCopyToClipboard(password);
@@ -61,23 +65,34 @@ export const PasswordGenerator = () => {
 
     try {
       document.execCommand('copy');
-      toast.success('密码已复制到剪贴板！');
+      toast.success(t.copied);
     } catch (err) {
-      toast.error('复制失败，请手动复制');
+      toast.error(t.copyError);
     } finally {
       document.body.removeChild(textArea);
     }
   };
 
   return (
-    <Card className="w-full max-w-[500px] shadow-2xl">
+    <Card className="w-full max-w-[500px] shadow-2xl relative">
+      {/* 语言切换按钮 */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={toggleLanguage}
+        className="absolute top-4 right-4 z-10"
+        title={language === 'zh' ? 'Switch to English' : '切换到中文'}
+      >
+        <Languages className="h-5 w-5" />
+      </Button>
+
       <CardHeader className="text-center">
         <CardTitle className="flex items-center justify-center gap-2 text-3xl">
           <Lock className="h-7 w-7" />
-          密码生成器
+          {t.title}
         </CardTitle>
         <CardDescription className="text-base">
-          快速生成安全可靠的密码
+          {t.subtitle}
         </CardDescription>
       </CardHeader>
 
@@ -85,7 +100,7 @@ export const PasswordGenerator = () => {
         {/* 密码显示区域 */}
         <div className="bg-muted/50 border-2 border-border rounded-xl p-5 min-h-[70px] flex items-center justify-center">
           <p className="text-2xl font-semibold text-center break-all tracking-wide font-mono">
-            {password || '点击下方按钮生成密码'}
+            {password || t.placeholder}
           </p>
         </div>
 
@@ -93,7 +108,7 @@ export const PasswordGenerator = () => {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <Label htmlFor="length-slider" className="text-base font-medium">
-              密码长度：
+              {t.passwordLength}
               <span className="text-primary text-lg font-bold ml-2">{length}</span>
             </Label>
             <Input
@@ -119,7 +134,7 @@ export const PasswordGenerator = () => {
 
         {/* 字符类型选择 */}
         <div className="space-y-3">
-          <Label className="text-base font-medium">包含字符类型：</Label>
+          <Label className="text-base font-medium">{t.includeCharTypes}</Label>
           <div className="space-y-3">
             <div className="flex items-center space-x-3">
               <Checkbox
@@ -133,7 +148,7 @@ export const PasswordGenerator = () => {
                 htmlFor="uppercase"
                 className="text-sm font-normal cursor-pointer"
               >
-                大写字母 (A-Z)
+                {t.uppercase}
               </Label>
             </div>
 
@@ -149,7 +164,7 @@ export const PasswordGenerator = () => {
                 htmlFor="lowercase"
                 className="text-sm font-normal cursor-pointer"
               >
-                小写字母 (a-z)
+                {t.lowercase}
               </Label>
             </div>
 
@@ -165,7 +180,7 @@ export const PasswordGenerator = () => {
                 htmlFor="numbers"
                 className="text-sm font-normal cursor-pointer"
               >
-                数字 (0-9)
+                {t.numbers}
               </Label>
             </div>
 
@@ -181,7 +196,7 @@ export const PasswordGenerator = () => {
                 htmlFor="symbols"
                 className="text-sm font-normal cursor-pointer"
               >
-                特殊字符 (!@#$%^&*)
+                {t.symbols}
               </Label>
             </div>
           </div>
@@ -195,7 +210,7 @@ export const PasswordGenerator = () => {
             size="lg"
           >
             <RefreshCw className="mr-2 h-5 w-5" />
-            生成密码
+            {t.generate}
           </Button>
           <Button
             onClick={handleCopy}
@@ -204,7 +219,7 @@ export const PasswordGenerator = () => {
             size="lg"
           >
             <Copy className="mr-2 h-5 w-5" />
-            复制密码
+            {t.copy}
           </Button>
         </div>
       </CardContent>

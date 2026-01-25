@@ -24,7 +24,7 @@ export const usePasswordGenerator = () => {
   });
 
   // 生成密码的核心函数
-  const generatePassword = useCallback(() => {
+  const generatePassword = useCallback((errorMessage?: string) => {
     // 收集所有选中的字符集
     const selectedCharsets: string[] = [];
     if (options.includeUppercase) selectedCharsets.push(UPPERCASE);
@@ -34,7 +34,7 @@ export const usePasswordGenerator = () => {
 
     // 检查是否至少选择了一种字符类型
     if (selectedCharsets.length === 0) {
-      return '请至少选择一种字符类型';
+      return errorMessage || 'Please select at least one character type';
     }
 
     // 构建完整字符集
