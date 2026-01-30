@@ -1,27 +1,57 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 // 字符集定义
 const UPPERCASE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const LOWERCASE = 'abcdefghijklmnopqrstuvwxyz';
 const NUMBERS = '0123456789';
-const SYMBOLS = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+
+// 特殊字符分组 - 导出供 SymbolSelector 使用
+export const SYMBOL_GROUPS = {
+  common: '!@#$%^&*',
+  brackets: '()[]{}',
+  operators: '+-=',
+  others: '_|;:,.<>?',
+} as const;
+
+// 获取所有特殊字符 - 导出供 SymbolSelector 使用
+export const ALL_SYMBOLS = Object.values(SYMBOL_GROUPS).join('');
 
 interface PasswordOptions {
   includeUppercase: boolean;
   includeLowercase: boolean;
   includeNumbers: boolean;
   includeSymbols: boolean;
+  customSymbols: string; // 用户自定义的特殊字符
 }
 
+const STORAGE_KEY = 'password-generator-options';
+
 export const usePasswordGenerator = () => {
+  // 从 localStorage 读取保存的配置
   const [password, setPassword] = useState<string>('');
   const [length, setLength] = useState<number>(16);
-  const [options, setOptions] = useState<PasswordOptions>({
-    includeUppercase: true,
-    includeLowercase: true,
-    includeNumbers: true,
-    includeSymbols: true,
+  const [options, setOptions] = useState<PasswordOptions>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        // 解析失败，使用默认值
+      }
+    }
+    return {
+      includeUppercase: true,
+      includeLowercase: true,
+      includeNumbers: true,
+      includeSymbols: true,
+      customSymbols: ALL_SYMBOLS, // 默认全选
+    };
   });
+
+  // 保存配置到 localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(options));
+  }, [options]);
 
   // 生成密码的核心函数
   const generatePassword = useCallback((errorMessage?: string) => {
@@ -30,7 +60,9 @@ export const usePasswordGenerator = () => {
     if (options.includeUppercase) selectedCharsets.push(UPPERCASE);
     if (options.includeLowercase) selectedCharsets.push(LOWERCASE);
     if (options.includeNumbers) selectedCharsets.push(NUMBERS);
-    if (options.includeSymbols) selectedCharsets.push(SYMBOLS);
+    if (options.includeSymbols && options.customSymbols) {
+      selectedCharsets.push(options.customSymbols);
+    }
 
     // 检查是否至少选择了一种字符类型
     if (selectedCharsets.length === 0) {
@@ -54,12 +86,14 @@ export const usePasswordGenerator = () => {
 
     // 第二步：填充剩余的字符（从完整字符集中随机选择）
     const remainingLength = length - guaranteedChars.length;
-    const randomValues = new Uint32Array(remainingLength);
-    crypto.getRandomValues(randomValues);
+    if (remainingLength > 0) {
+      const randomValues = new Uint32Array(remainingLength);
+      crypto.getRandomValues(randomValues);
 
-    for (let i = 0; i < remainingLength; i++) {
-      const randomIndex = randomValues[i] % charset.length;
-      guaranteedChars.push(charset[randomIndex]);
+      for (let i = 0; i < remainingLength; i++) {
+        const randomIndex = randomValues[i] % charset.length;
+        guaranteedChars.push(charset[randomIndex]);
+      }
     }
 
     // 第三步：打乱字符顺序（Fisher-Yates 洗牌算法）
@@ -95,7 +129,7 @@ export const usePasswordGenerator = () => {
       options.includeUppercase ||
       options.includeLowercase ||
       options.includeNumbers ||
-      options.includeSymbols
+      (options.includeSymbols && options.customSymbols.length > 0)
     );
   }, [options]);
 
