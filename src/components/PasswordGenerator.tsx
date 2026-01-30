@@ -1,3 +1,4 @@
+import { SymbolSelector } from './SymbolSelector';
 import { useEffect } from 'react';
 import { Lock, Copy, RefreshCw, Languages } from 'lucide-react';
 import { toast } from 'sonner';
@@ -184,20 +185,35 @@ export const PasswordGenerator = () => {
               </Label>
             </div>
 
-            <div className="flex items-center space-x-3">
-              <Checkbox
-                id="symbols"
-                checked={options.includeSymbols}
-                onCheckedChange={(checked) =>
-                  updateOptions({ includeSymbols: checked as boolean })
-                }
-              />
-              <Label
-                htmlFor="symbols"
-                className="text-sm font-normal cursor-pointer"
-              >
-                {t.symbols}
-              </Label>
+                     <div className="space-y-2">
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  id="symbols"
+                  checked={options.includeSymbols}
+                  onCheckedChange={(checked) =>
+                    updateOptions({ includeSymbols: checked as boolean })
+                  }
+                />
+                <Label
+                  htmlFor="symbols"
+                  className="text-sm font-normal cursor-pointer"
+                >
+                  {t.symbols}
+                </Label>
+              </div>
+              
+              {/* 自定义符号选择器 */}
+              {options.includeSymbols && (
+                <div className="ml-9">
+                  <SymbolSelector
+                    customSymbols={options.customSymbols || ''}
+                    onCustomSymbolsChange={(symbols) =>
+                      updateOptions({ customSymbols: symbols })
+                    }
+                    t={t}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
